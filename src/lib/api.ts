@@ -99,8 +99,8 @@ export const api = {
   // File upload (Cloudinary via backend). Important: do not set JSON headers here
   uploadFile: async (file: File) => {
     const fd = new FormData();
-    // backend expects field name 'Upload File' (see uploads.route.js)
-    fd.append('Upload File', file);
+    // backend expects field name 'File' on /upload
+    fd.append('File', file);
     const res = await fetch(`${BASE_URL}/upload`, {
       method: 'POST',
       body: fd,
