@@ -33,14 +33,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const setTokens = (accessToken?: string, refreshToken?: string) => {
+const setTokens = (accessToken?: string, refreshToken?: string, role?: UserRole) => {
   if (accessToken) localStorage.setItem('accessToken', accessToken);
   if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+  if (role) localStorage.setItem('userRole', role);
 };
 
 const clearTokens = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userRole');
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -52,19 +54,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const token = localStorage.getItem('accessToken');
         if (token) {
-          // Try admin me first (current scope is admin-only flow)
-          const resp = await adminApi.me();
-          const u = (resp as any)?.data?.user || (resp as any)?.data;
+          // Decode role from token if possible
+          let role: UserRole | null = null;
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              role = payload.role;
+            }
+          } catch (e) {
+            console.error('Error decoding token:', e);
+          }
+
+          // Fallback to role stored in localStorage
+          if (!role) {
+            role = localStorage.getItem('userRole') as UserRole;
+          }
+
+          // Default to admin if nothing found (to maintain existing behavior)
+          if (!role) {
+            role = 'admin';
+          }
+
+          let u: any = null;
+          if (role === 'admin') {
+            const resp = await adminApi.me();
+            u = (resp as any)?.data?.user || (resp as any)?.data;
+          } else if (role === 'teacher') {
+            const resp = await api.teacherMe();
+            u = (resp as any)?.data?.user || (resp as any)?.data;
+          } else if (role === 'student') {
+            const resp = await api.studentMe();
+            u = (resp as any)?.data?.user || (resp as any)?.data;
+          }
+
           if (u) {
             const userData = {
               ...u,
-              role: 'admin',
-              name: u.name || u.username || u.fullName || u.email?.split('@')[0] || 'Admin'
+              role: role,
+              name: u.name || u.username || u.fullName || u.email?.split('@')[0] || (role.charAt(0).toUpperCase() + role.slice(1))
             };
             setUser(userData as User);
+          } else {
+            clearTokens();
           }
         }
-      } catch (_) {
+      } catch (err) {
+        console.error('Bootstrap error:', err);
         clearTokens();
       } finally {
         setIsLoading(false);
@@ -80,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data: any = (resp as any);
       const tokens = data?.data || data; // support envelope
       if (tokens?.accessToken) {
-        setTokens(tokens.accessToken, tokens.refreshToken);
+        setTokens(tokens.accessToken, tokens.refreshToken, 'teacher');
         const me = await api.teacherMe();
         const u = (me as any)?.data?.user || (me as any)?.data;
         if (u) {
@@ -109,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data: any = (resp as any);
       const tokens = data?.data || data;
       if (tokens?.accessToken) {
-        setTokens(tokens.accessToken, tokens.refreshToken);
+        setTokens(tokens.accessToken, tokens.refreshToken, 'student');
         const me = await api.studentMe();
         const u = (me as any)?.data?.user || (me as any)?.data;
         if (u) {
@@ -143,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const resp = await adminApi.registerAdmin(payload);
       const data = (resp as any)?.data;
       if (data?.accessToken) {
-        setTokens(data.accessToken, data.refreshToken);
+        setTokens(data.accessToken, data.refreshToken, 'admin');
         const admin = data.admin;
         if (admin) {
           const userData = {
@@ -167,7 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const resp = await adminApi.loginAdmin({ email, password });
       const data = (resp as any)?.data;
       if (data?.accessToken) {
-        setTokens(data.accessToken, data.refreshToken);
+        setTokens(data.accessToken, data.refreshToken, 'admin');
         // fetch me to populate user
         const me = await adminApi.me();
         const u = (me as any)?.data?.user || (me as any)?.data;

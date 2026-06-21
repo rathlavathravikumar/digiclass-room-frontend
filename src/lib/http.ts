@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:3001';
+const BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 
+  ((typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV) ? '' : 'http://localhost:3001');
 
 export const http = axios.create({
   baseURL: BASE_URL,
