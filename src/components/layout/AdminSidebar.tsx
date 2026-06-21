@@ -29,8 +29,8 @@ const navigation = [
 
 const AdminSidebar = ({ activeSection, onSectionChange }: AdminSidebarProps) => {
   return (
-    <aside className="w-64 bg-card border-r border-border h-[calc(100vh-4rem)] overflow-y-auto">
-      <nav className="p-4 space-y-2">
+    <aside className="w-full lg:w-64 bg-card/95 backdrop-blur border-b lg:border-b-0 lg:border-r border-border lg:h-[calc(100vh-4rem)] overflow-x-auto lg:overflow-y-auto">
+      <nav className="flex gap-2 p-3 lg:block lg:p-4 lg:space-y-2">
         {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
@@ -40,7 +40,7 @@ const AdminSidebar = ({ activeSection, onSectionChange }: AdminSidebarProps) => 
               key={item.name}
               onClick={() => onSectionChange(item.id)}
               className={cn(
-                "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                "flex shrink-0 items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all lg:w-full",
                 isActive
                   ? "bg-warning text-warning-foreground shadow-md"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"

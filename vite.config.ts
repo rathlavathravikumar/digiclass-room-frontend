@@ -10,17 +10,17 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://digiclassroomserver-env.eba-hsh37kmu.ap-south-1.elasticbeanstalk.com/',
         changeOrigin: true,
         secure: false,
       },
       '/healthcheck': {
-        target: 'http://localhost:3001',
+        target: 'http://digiclassroomserver-env.eba-hsh37kmu.ap-south-1.elasticbeanstalk.com/healthcheck',
         changeOrigin: true,
         secure: false,
       },
       '/upload': {
-        target: 'http://localhost:3001',
+        target: 'http://digiclassroomserver-env.eba-hsh37kmu.ap-south-1.elasticbeanstalk.com/upload',
         changeOrigin: true,
         secure: false,
       }

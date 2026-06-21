@@ -49,6 +49,7 @@ const AdminDashboard = () => {
   // Dashboard stats state
   const [dashboardStats, setDashboardStats] = useState<{ totalStudents: number; totalTeachers: number; totalCourses: number; totalNotices: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
 
   const displayUsers = ((): any[] => {
     if (userFilter === "teacher") return teachersData.map(t => ({ ...t, role: "teacher" }));
@@ -110,6 +111,9 @@ const AdminDashboard = () => {
         try {
           const res = await api.getAdminStats();
           setDashboardStats((res as any)?.data || { totalStudents: 0, totalTeachers: 0, totalCourses: 0, totalNotices: 0 });
+          const usersRes = await adminApi.listUsers();
+          setTeachersData((usersRes as any)?.data?.teachers || []);
+          setStudentsData((usersRes as any)?.data?.students || []);
         } catch (e) {
           console.error('Failed to load admin stats:', e);
           setDashboardStats({ totalStudents: 0, totalTeachers: 0, totalCourses: 0, totalNotices: 0 });
@@ -119,7 +123,7 @@ const AdminDashboard = () => {
       };
       loadStats();
     }
-  }, [activeSection]);
+  }, [activeSection, dashboardRefreshKey]);
 
   // Load recent courses for dashboard
   useEffect(() => {
@@ -135,7 +139,7 @@ const AdminDashboard = () => {
       };
       loadRecentCourses();
     }
-  }, [activeSection]);
+  }, [activeSection, dashboardRefreshKey]);
 
   const adminStats = [
     {
@@ -210,6 +214,7 @@ const AdminDashboard = () => {
     try {
       await adminApi.setTimetable({ data: nextData });
       setTtData(nextData);
+      setDashboardRefreshKey((key) => key + 1);
       toast.success('Timetable updated');
     } catch (_) {
       toast.error('Failed to save timetable');
@@ -238,17 +243,22 @@ const AdminDashboard = () => {
       case "dashboard":
         return (
           <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-              <p className="text-muted-foreground">System overview and management</p>
+            <div className="dashboard-section-header">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
+                <p className="text-muted-foreground">System overview and management</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setDashboardRefreshKey((key) => key + 1)} disabled={loadingStats}>
+                Refresh
+              </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
               {adminStats.map((stat, index) => {
                 const Icon = stat.icon;
                 
                 return (
-                  <div key={index} className="card-academic p-6 hover:scale-105 transition-transform">
+                  <div key={index} className="stat-card">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground mb-1">
@@ -366,6 +376,7 @@ const AdminDashboard = () => {
               onView={(id) => { setSelectedCourseId(id); setActiveSection("course-detail"); }}
               onEdit={(course) => { setEditingCourse(course); setActiveSection("edit-course"); }}
               onCreate={() => { setEditingCourse(null); setActiveSection("create-course"); }}
+              onChanged={() => setDashboardRefreshKey((key) => key + 1)}
             />
           </div>
         );
@@ -491,6 +502,7 @@ const AdminDashboard = () => {
                         setOpenAddTeacher(false);
                         setFormTeacher({ name: "", email: "", password: "", clg_id: "" });
                         await refreshUsers();
+                        setDashboardRefreshKey((key) => key + 1);
                       }}>Create</Button>
                     </DialogFooter>
                   </DialogContent>
@@ -535,6 +547,7 @@ const AdminDashboard = () => {
                         setOpenAddStudent(false);
                         setFormStudent({ name: "", email: "", password: "", clg_id: "" });
                         await refreshUsers();
+                        setDashboardRefreshKey((key) => key + 1);
                       }}>Create</Button>
                     </DialogFooter>
                   </DialogContent>
@@ -595,6 +608,7 @@ const AdminDashboard = () => {
                               try {
                                 await adminApi.deleteUser(u._id || u.id, u.role);
                                 await refreshUsers();
+                                setDashboardRefreshKey((key) => key + 1);
                                 toast.success(`${u.role === 'student' ? 'Student' : 'Teacher'} deleted successfully`);
                               } catch (error) {
                                 console.error('Failed to delete user:', error);
@@ -621,7 +635,7 @@ const AdminDashboard = () => {
         return (
           <div className="space-y-6">
             <h1 className="text-3xl font-bold text-foreground">Create New Course</h1>
-            <AdminCourseForm mode="create" onSuccess={() => setActiveSection("courses")} />
+            <AdminCourseForm mode="create" onSuccess={() => { setDashboardRefreshKey((key) => key + 1); setActiveSection("courses"); }} />
           </div>
         );
 
@@ -629,7 +643,7 @@ const AdminDashboard = () => {
         return (
           <div className="space-y-6">
             <h1 className="text-3xl font-bold text-foreground">Edit Course</h1>
-            <AdminCourseForm mode="edit" initialData={editingCourse} onSuccess={() => setActiveSection("courses")} />
+            <AdminCourseForm mode="edit" initialData={editingCourse} onSuccess={() => { setDashboardRefreshKey((key) => key + 1); setActiveSection("courses"); }} />
           </div>
         );
 
@@ -716,6 +730,7 @@ const AdminDashboard = () => {
                         setNoticeForm({ title: '', content: '', priority: 'normal', target: 'all' });
                         const res = await adminApi.listNotices(noticeFilter !== 'all' ? { target: noticeFilter } as any : undefined);
                         setNotices((res as any)?.data || (res as any) || []);
+                        setDashboardRefreshKey((key) => key + 1);
                         toast.success('Notice created successfully');
                       } catch (error) { 
                         console.error('Failed to create notice:', error);
@@ -761,7 +776,7 @@ const AdminDashboard = () => {
                       <div className="mt-2 text-sm">{n.content}</div>
                       <div className="mt-3 flex justify-end">
                         <Button variant="outline" className="text-destructive" onClick={async () => {
-                          try { await adminApi.deleteNotice(n._id); setNotices(notices.filter(x => x._id !== n._id)); toast.success('Deleted'); } catch (_) { toast.error('Failed to delete'); }
+                          try { await adminApi.deleteNotice(n._id); setNotices(notices.filter(x => x._id !== n._id)); setDashboardRefreshKey((key) => key + 1); toast.success('Deleted'); } catch (_) { toast.error('Failed to delete'); }
                         }}>Delete</Button>
                       </div>
                     </div>
@@ -789,9 +804,9 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <RoleBasedHeader />
-      <div className="flex">
+      <div className="dashboard-shell">
         <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-        <main className="flex-1 p-8">
+        <main className="dashboard-main">
           {renderContent()}
         </main>
       </div>

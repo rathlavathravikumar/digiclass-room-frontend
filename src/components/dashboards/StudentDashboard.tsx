@@ -55,6 +55,7 @@ const StudentDashboard = () => {
   // Dashboard stats state
   const [studentStats, setStudentStats] = useState<{ enrolledCourses: number; completedAssignments: number; pendingAssignments: number; averageGrade: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
   
   // Test statistics state
   const [testStatistics, setTestStatistics] = useState<any[]>([]);
@@ -252,6 +253,7 @@ const StudentDashboard = () => {
       const data = (res as any)?.data || {};
       setTestResult({ score: data.score ?? 0, total: data.max_score ?? (currentTest.total_marks || 100) });
       setTestActive(false);
+      setDashboardRefreshKey((key) => key + 1);
       // refresh attempted set and test statistics
       if (user?._id) {
         const marksRes = await api.listMarks({ type: 'test', student_id: user._id });
@@ -380,7 +382,7 @@ const StudentDashboard = () => {
   
   useEffect(() => {
     fetchAssignments();
-  }, [user?._id]);
+  }, [user?._id, dashboardRefreshKey]);
 
   // Filter and sort assignments
   const filteredAndSortedAssignments = assignments
@@ -468,7 +470,7 @@ const StudentDashboard = () => {
       };
       loadStats();
     }
-  }, [activeSection, user?._id]);
+  }, [activeSection, user?._id, dashboardRefreshKey]);
 
   // Load course resources when needed
   const loadCourseResources = async (courseId: string) => {
@@ -489,9 +491,14 @@ const StudentDashboard = () => {
       case "dashboard":
         return (
           <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-foreground">Student Dashboard</h1>
-              <p className="text-muted-foreground">Welcome back! Here's your academic overview.</p>
+            <div className="dashboard-section-header">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Student Dashboard</h1>
+                <p className="text-muted-foreground">Welcome back! Here's your academic overview.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setDashboardRefreshKey((key) => key + 1)} disabled={loadingStats}>
+                Refresh
+              </Button>
             </div>
             
             <StatsCards studentStats={studentStats} loading={loadingStats} />
@@ -696,6 +703,7 @@ const StudentDashboard = () => {
                         setAssignDialogOpen(false);
                         // Refresh assignments list to show updated status
                         await fetchAssignments();
+                        setDashboardRefreshKey((key) => key + 1);
                         // Switch to submitted filter to show the newly submitted assignment
                         setAssignmentFilter('submitted');
                       } catch (e) { alert('Failed to submit'); }
@@ -1461,6 +1469,7 @@ const StudentDashboard = () => {
                         
                         alert('Test submitted');
                         setTestDialogOpen(false);
+                        setDashboardRefreshKey((key) => key + 1);
                       } catch (e) { alert('Failed to submit test'); }
                     }}>Submit</Button>
                   </div>
@@ -1484,9 +1493,9 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <RoleBasedHeader />
-      <div className="flex">
+      <div className="dashboard-shell">
         <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-        <main className="flex-1 p-8">
+        <main className="dashboard-main">
           {renderContent()}
         </main>
       </div>

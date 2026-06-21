@@ -82,6 +82,7 @@ const TeacherDashboard = () => {
   // Dashboard stats state
   const [teacherStats, setTeacherStats] = useState<{ activeCourses: number; totalStudents: number; pendingSubmissions: number; testsCreated: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
 
   useEffect(() => {
     if (activeSection === 'notices') {
@@ -107,7 +108,7 @@ const TeacherDashboard = () => {
         } catch (_) { setAssignments([]); }
       })();
     }
-  }, [activeSection, user?._id]);
+  }, [activeSection, user?._id, dashboardRefreshKey]);
 
   // Load courses for selects when landing on assignment/test/attendance sections (load only teacher's courses)
   useEffect(() => {
@@ -414,6 +415,7 @@ const TeacherDashboard = () => {
         date: selectedDate,
         records
       });
+      setDashboardRefreshKey((key) => key + 1);
 
       alert(`Attendance saved successfully for ${selectedDate}`);
     } catch (error) {
@@ -776,6 +778,9 @@ const handleCourseResourceUpload = async () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
+                  <Button variant="outline" onClick={() => setDashboardRefreshKey((key) => key + 1)} disabled={loadingStats}>
+                    Refresh
+                  </Button>
                   <div className="px-6 py-3 bg-primary/10 rounded-full border border-primary/20">
                     <span className="text-sm font-semibold text-primary">
                       {loadingStats ? 'Loading...' : `${teacherCourses.length} Active Courses`}
@@ -1369,9 +1374,10 @@ case "upload":
                                   // Refresh assignments list
                                   if (user?._id) {
                                     const res = await api.getAssignments({ teacher_id: user._id });
-                                    const list = (res as any)?.data || (res as any) || [];
-                                    setAssignments(list);
+                                  const list = (res as any)?.data || (res as any) || [];
+                                  setAssignments(list);
                                   }
+                                  setDashboardRefreshKey((key) => key + 1);
                                   alert('Assignment deleted successfully');
                                 } catch (error) {
                                   console.error('Failed to delete assignment:', error);
@@ -1445,6 +1451,7 @@ case "upload":
                                                 remarks: '',
                                                 course_id: a.course_id || undefined,
                                               });
+                                              setDashboardRefreshKey((key) => key + 1);
                                               alert('Marks saved successfully!');
                                             } catch (e) { alert('Failed to save marks'); }
                                           }}
@@ -1559,6 +1566,7 @@ case "upload":
                       const list = (res as any)?.data || (res as any) || [];
                       setAssignments(list);
                     }
+                    setDashboardRefreshKey((key) => key + 1);
                     alert('Assignment created');
                   } catch (e) {
                     alert('Failed to create assignment');
@@ -1747,6 +1755,7 @@ case "upload":
                           const res = await api.getTests();
                           const list = (res as any)?.data || (res as any) || [];
                           setTests(list);
+                          setDashboardRefreshKey((key) => key + 1);
                           // reset form
                           setNewTest({ course_id: '', title: '', description: '', scheduled_at: '', duration: '' });
                           setQuestions([{ question: "", options: ["", "", "", ""], correct: "A", marks: 1 }]);
@@ -1830,6 +1839,7 @@ case "upload":
                                   const res = await api.getTests();
                                   const list = (res as any)?.data || (res as any) || [];
                                   setTests(list);
+                                  setDashboardRefreshKey((key) => key + 1);
                                   alert('Test deleted successfully');
                                 } catch (error) {
                                   console.error('Failed to delete test:', error);
@@ -1930,9 +1940,6 @@ case "upload":
       case "meetings":
         return <MeetingsList userRole="teacher" userId={user?._id || user?.id || ""} />;
 
-      case "progress":
-        return <StudentProgressTracker />;
-
       default:
         return (
           <div className="flex items-center justify-center h-64">
@@ -1959,9 +1966,9 @@ case "upload":
   return (
     <div className="min-h-screen bg-background">
       <RoleBasedHeader />
-      <div className="flex">
+      <div className="dashboard-shell">
         <TeacherSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
-        <main className="flex-1 p-8">
+        <main className="dashboard-main">
           {renderContent()}
         </main>
       </div>

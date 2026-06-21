@@ -14,9 +14,10 @@ interface AdminCourseListProps {
   onView: (id: string) => void;
   onEdit: (course: any) => void;
   onCreate: () => void;
+  onChanged?: () => void;
 }
 
-const AdminCourseList = ({ onView, onEdit, onCreate }: AdminCourseListProps) => {
+const AdminCourseList = ({ onView, onEdit, onCreate, onChanged }: AdminCourseListProps) => {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [confirm, setConfirm] = useState<{ id?: string; name?: string } | null>(null);
@@ -45,6 +46,7 @@ const AdminCourseList = ({ onView, onEdit, onCreate }: AdminCourseListProps) => 
     onSuccess: () => {
       toast.success("Course deleted");
       qc.invalidateQueries({ queryKey: ["courses"] });
+      onChanged?.();
     },
     onError: () => toast.error("Failed to delete course"),
   });
